@@ -1,0 +1,57 @@
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1305.h>
+#include <esp_now.h>
+#include <WiFi.h>
+
+#define OLED_CLK 18 // 7
+#define OLED_MOSI 23 // 8
+#define OLED_CS 5 // 15
+#define OLED_DC 19 // 4
+#define OLED_RESET 22 // 16
+Adafruit_SSD1305 display(128, 64, &SPI, OLED_DC, OLED_RESET, OLED_CS, 7000000UL);
+
+typedef struct struct_message
+ {
+   float tempC;
+ } struct_message;
+struct_message myData;
+
+void OnDataRecv(const esp_now_recv_info_t * info, const uint8_t *incomingData, int len)
+ {
+   memcpy(&myData, incomingData, sizeof(myData));
+ }
+
+void setup()
+ {
+   Serial.begin(9600);
+
+   if (! display.begin(0x3C))
+   {
+     Serial.println("Unable to initialize OLED");
+     while (1) yield();
+   }
+
+   WiFi.mode(WIFI_STA);
+   if (esp_now_init() != ESP_OK)
+   {
+     Serial.println("Error initializing ESP-NOW");
+     return;
+   }
+
+  esp_now_register_recv_cb(OnDataRecv);
+ }
+
+void loop() {
+  display.clearDisplay();
+  display.setCursor(24,32);
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.print("Temp: ");
+  display.print(myData.tempC);
+  display.println(" C");
+  display.display();
+  Serial.println(myData.tempC);
+  delay(1000);
+}
